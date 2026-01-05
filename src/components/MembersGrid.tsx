@@ -37,7 +37,7 @@ const MembersGrid = ({ members, section }: MembersGridProps) => {
   const sectionInfo = getSectionInfo(section);
   
   // Filter members by section
-  const sectionMembers = members.filter((m) => m.section === section && m.isVisible);
+  const sectionMembers = members.filter((m) => m.section === section && m.is_visible);
 
   return (
     <div className="relative min-h-[40vh]">
