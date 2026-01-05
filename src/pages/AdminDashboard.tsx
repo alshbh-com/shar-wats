@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Eye,
+  EyeOff,
   ArrowRight,
   LogOut,
   Users,
@@ -25,11 +25,11 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Member, Section, Package } from '@/types/member';
-import { mockMembers } from '@/data/mockMembers';
 import { cn } from '@/lib/utils';
+import { useMembersStore } from '@/hooks/useMembersStore';
 
 const AdminDashboard = () => {
-  const [members, setMembers] = useState<Member[]>(mockMembers);
+  const { members, addMember, updateMember, deleteMember, toggleVisibility: toggleVisibilityById, stats } = useMembersStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [filterSection, setFilterSection] = useState<Section | 'all'>('all');
@@ -101,38 +101,26 @@ const AdminDashboard = () => {
     }
 
     if (editingMember) {
-      // Update existing member
-      setMembers((prev) =>
-        prev.map((m) =>
-          m.id === editingMember.id
-            ? {
-                ...m,
-                name: formData.name,
-                image: formData.image || undefined,
-                contact: formData.contact || undefined,
-                section: formData.section,
-                package: formData.package,
-              }
-            : m
-        )
-      );
+      updateMember(editingMember.id, {
+        name: formData.name,
+        image: formData.image || undefined,
+        contact: formData.contact || undefined,
+        section: formData.section,
+        package: formData.package,
+      });
       toast({
         title: 'تم التحديث',
         description: `تم تحديث بيانات ${formData.name}`,
       });
     } else {
-      // Add new member
-      const newMember: Member = {
-        id: Date.now().toString(),
+      addMember({
         name: formData.name,
         image: formData.image || undefined,
         contact: formData.contact || undefined,
         section: formData.section,
         package: formData.package,
         isVisible: true,
-        createdAt: new Date(),
-      };
-      setMembers((prev) => [...prev, newMember]);
+      });
       toast({
         title: 'تمت الإضافة',
         description: `تم إضافة ${formData.name} بنجاح`,
@@ -144,7 +132,7 @@ const AdminDashboard = () => {
 
   const handleDelete = (member: Member) => {
     if (confirm(`هل أنت متأكد من حذف ${member.name}؟`)) {
-      setMembers((prev) => prev.filter((m) => m.id !== member.id));
+      deleteMember(member.id);
       toast({
         title: 'تم الحذف',
         description: `تم حذف ${member.name}`,
@@ -153,11 +141,7 @@ const AdminDashboard = () => {
   };
 
   const toggleVisibility = (member: Member) => {
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === member.id ? { ...m, isVisible: !m.isVisible } : m
-      )
-    );
+    toggleVisibilityById(member.id);
     toast({
       title: member.isVisible ? 'تم الإخفاء' : 'تم الإظهار',
       description: `${member.name} ${member.isVisible ? 'مخفي الآن' : 'ظاهر الآن'}`,
@@ -179,18 +163,18 @@ const AdminDashboard = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowRight className="w-5 h-5" />
             <span>الرئيسية</span>
           </Link>
-          
+
           <h1 className="text-xl font-bold text-gradient-purple">لوحة التحكم</h1>
-          
-          <Button 
-            variant="ghost" 
+
+          <Button
+            variant="ghost"
             size="sm"
             onClick={handleLogout}
             className="text-destructive hover:text-destructive"
@@ -211,7 +195,7 @@ const AdminDashboard = () => {
                 <Crown className="w-5 h-5 text-gold" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'كبار مجال الشير').length}</p>
+                <p className="text-2xl font-bold">{stats.كبار}</p>
                 <p className="text-xs text-muted-foreground">كبار الشير</p>
               </div>
             </div>
@@ -222,7 +206,7 @@ const AdminDashboard = () => {
                 <Star className="w-5 h-5 text-silver" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'نجوم الشير').length}</p>
+                <p className="text-2xl font-bold">{stats.نجوم}</p>
                 <p className="text-xs text-muted-foreground">نجوم الشير</p>
               </div>
             </div>
@@ -233,7 +217,7 @@ const AdminDashboard = () => {
                 <Users className="w-5 h-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'بتوع الشير').length}</p>
+                <p className="text-2xl font-bold">{stats.بتوع}</p>
                 <p className="text-xs text-muted-foreground">بتوع الشير</p>
               </div>
             </div>
@@ -246,9 +230,9 @@ const AdminDashboard = () => {
             <Plus className="w-4 h-4" />
             إضافة عضو
           </Button>
-          
-          <Select 
-            value={filterSection} 
+
+          <Select
+            value={filterSection}
             onValueChange={(v) => setFilterSection(v as Section | 'all')}
           >
             <SelectTrigger className="w-full sm:w-48">
@@ -282,10 +266,11 @@ const AdminDashboard = () => {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {member.image ? (
-                          <img 
-                            src={member.image} 
-                            alt={member.name} 
+                          <img
+                            src={member.image}
+                            alt={member.name}
                             className="w-10 h-10 rounded-full object-cover"
+                            loading="lazy"
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -303,26 +288,28 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs font-medium",
-                        member.isVisible 
-                          ? "bg-green-500/20 text-green-400" 
-                          : "bg-destructive/20 text-destructive"
-                      )}>
+                      <span
+                        className={cn(
+                          "px-2 py-1 rounded-full text-xs font-medium",
+                          member.isVisible
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-destructive/20 text-destructive"
+                        )}
+                      >
                         {member.isVisible ? 'ظاهر' : 'مخفي'}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => openEditModal(member)}
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => toggleVisibility(member)}
                         >
@@ -332,8 +319,8 @@ const AdminDashboard = () => {
                             <Eye className="w-4 h-4" />
                           )}
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(member)}
                           className="text-destructive hover:text-destructive"
@@ -359,8 +346,8 @@ const AdminDashboard = () => {
               <h2 className="text-xl font-bold">
                 {editingMember ? 'تعديل العضو' : 'إضافة عضو جديد'}
               </h2>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 onClick={() => setIsModalOpen(false)}
               >
@@ -385,8 +372,8 @@ const AdminDashboard = () => {
                 <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   القسم
                 </label>
-                <Select 
-                  value={formData.section} 
+                <Select
+                  value={formData.section}
                   onValueChange={(v) => handleSectionChange(v as Section)}
                 >
                   <SelectTrigger>
@@ -448,14 +435,14 @@ const AdminDashboard = () => {
 
             {/* Actions */}
             <div className="flex gap-3 mt-6">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setIsModalOpen(false)}
               >
                 إلغاء
               </Button>
-              <Button 
+              <Button
                 className="flex-1 gap-2"
                 onClick={handleSave}
               >
@@ -471,3 +458,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
