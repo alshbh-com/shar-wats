@@ -1,49 +1,79 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, AlertCircle, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, AlertCircle, ArrowRight, Mail, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-
-// Simple hash for demo - in production, use proper auth
-const ADMIN_PASSWORD_HASH = '01278006248@01204486263';
+import { useAuth } from '@/hooks/useAuth';
 
 const AdminLogin = () => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn, user, isAdmin, isLoading: authLoading } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      navigate('/admin/dashboard');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simple password check - in production, use proper auth
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD_HASH) {
-        localStorage.setItem('admin_auth', 'true');
-        toast({
-          title: 'تم تسجيل الدخول',
-          description: 'مرحباً بك في لوحة التحكم',
-        });
-        navigate('/admin/dashboard');
+    // Basic validation
+    if (!email.trim()) {
+      setError('يرجى إدخال البريد الإلكتروني');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('يرجى إدخال كلمة المرور');
+      setIsLoading(false);
+      return;
+    }
+
+    const { error: signInError } = await signIn(email, password);
+
+    if (signInError) {
+      if (signInError.message.includes('Invalid login credentials')) {
+        setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      } else if (signInError.message.includes('Email not confirmed')) {
+        setError('يرجى تأكيد البريد الإلكتروني أولاً');
       } else {
-        setError('كلمة المرور غير صحيحة');
+        setError(signInError.message || 'حدث خطأ أثناء تسجيل الدخول');
       }
       setIsLoading(false);
-    }, 500);
+      return;
+    }
+
+    // Wait a moment for admin status to be checked
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">جاري التحميل...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container flex h-16 items-center">
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowRight className="w-5 h-5" />
@@ -65,36 +95,70 @@ const AdminLogin = () => {
 
             {/* Title */}
             <h1 className="text-2xl font-bold text-center mb-2">لوحة التحكم</h1>
-            <p className="text-muted-foreground text-center mb-8">أدخل كلمة المرور للدخول</p>
+            <p className="text-muted-foreground text-center mb-8">سجل دخولك للوصول للوحة التحكم</p>
 
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <Input
-                  type="password"
-                  placeholder="كلمة المرور"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="text-center text-lg h-12"
-                  dir="ltr"
-                />
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                  البريد الإلكتروني
+                </label>
+                <div className="relative">
+                  <Input
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-12"
+                    dir="ltr"
+                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                  كلمة المرور
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12"
+                    dir="ltr"
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-destructive text-sm justify-center">
-                  <AlertCircle className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-destructive text-sm justify-center bg-destructive/10 rounded-lg p-3">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full h-12 text-lg"
                 disabled={isLoading}
               >
-                {isLoading ? 'جاري التحقق...' : 'دخول'}
+                {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
               </Button>
             </form>
+
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              هذه الصفحة للمشرفين فقط
+            </p>
           </div>
         </div>
       </main>

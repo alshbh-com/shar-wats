@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Plus,
@@ -12,7 +12,9 @@ import {
   Crown,
   Star,
   X,
-  Save
+  Save,
+  Search,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,18 +25,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { Member, Section, Package } from '@/types/member';
 import { cn } from '@/lib/utils';
-import { useMembersStore } from '@/hooks/useMembersStore';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  useMembersAdmin,
+  useAddMember,
+  useUpdateMember,
+  useDeleteMember,
+  useToggleVisibility,
+} from '@/hooks/useMembers';
 
 const AdminDashboard = () => {
-  const { members, addMember, updateMember, deleteMember, toggleVisibility: toggleVisibilityById, stats } = useMembersStore();
+  const { user, isAdmin, isLoading: authLoading, signOut } = useAuth();
+  const { data: members = [], isLoading: membersLoading } = useMembersAdmin();
+  const addMemberMutation = useAddMember();
+  const updateMemberMutation = useUpdateMember();
+  const deleteMemberMutation = useDeleteMember();
+  const toggleVisibilityMutation = useToggleVisibility();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterSection, setFilterSection] = useState<Section | 'all'>('all');
+  const [filterPackage, setFilterPackage] = useState<Package | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'package' | 'created_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -47,14 +67,13 @@ const AdminDashboard = () => {
 
   // Check auth
   useEffect(() => {
-    const isAuth = localStorage.getItem('admin_auth');
-    if (!isAuth) {
+    if (!authLoading && (!user || !isAdmin)) {
       navigate('/admin');
     }
-  }, [navigate]);
+  }, [user, isAdmin, authLoading, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_auth');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/admin');
   };
 
@@ -90,40 +109,28 @@ const AdminDashboard = () => {
     setFormData({ ...formData, section, package: pkg });
   };
 
-  const handleSave = () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: 'خطأ',
-        description: 'يرجى إدخال اسم العضو',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleSave = async () => {
+    if (!formData.name.trim()) return;
 
     if (editingMember) {
-      updateMember(editingMember.id, {
-        name: formData.name,
-        image: formData.image || undefined,
-        contact: formData.contact || undefined,
-        section: formData.section,
-        package: formData.package,
-      });
-      toast({
-        title: 'تم التحديث',
-        description: `تم تحديث بيانات ${formData.name}`,
+      updateMemberMutation.mutate({
+        id: editingMember.id,
+        updates: {
+          name: formData.name,
+          image: formData.image || null,
+          contact: formData.contact || null,
+          section: formData.section,
+          package: formData.package,
+        },
       });
     } else {
-      addMember({
+      addMemberMutation.mutate({
         name: formData.name,
-        image: formData.image || undefined,
-        contact: formData.contact || undefined,
+        image: formData.image || null,
+        contact: formData.contact || null,
         section: formData.section,
         package: formData.package,
-        isVisible: true,
-      });
-      toast({
-        title: 'تمت الإضافة',
-        description: `تم إضافة ${formData.name} بنجاح`,
+        is_visible: true,
       });
     }
 
@@ -132,31 +139,73 @@ const AdminDashboard = () => {
 
   const handleDelete = (member: Member) => {
     if (confirm(`هل أنت متأكد من حذف ${member.name}؟`)) {
-      deleteMember(member.id);
-      toast({
-        title: 'تم الحذف',
-        description: `تم حذف ${member.name}`,
-      });
+      deleteMemberMutation.mutate(member.id);
     }
   };
 
   const toggleVisibility = (member: Member) => {
-    toggleVisibilityById(member.id);
-    toast({
-      title: member.isVisible ? 'تم الإخفاء' : 'تم الإظهار',
-      description: `${member.name} ${member.isVisible ? 'مخفي الآن' : 'ظاهر الآن'}`,
-    });
+    toggleVisibilityMutation.mutate({ id: member.id, is_visible: member.is_visible });
   };
 
-  const filteredMembers = members
-    .filter((m) => filterSection === 'all' || m.section === filterSection)
-    .sort((a, b) => b.package - a.package);
+  // Filtered and sorted members
+  const filteredMembers = useMemo(() => {
+    let result = [...members];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((m) =>
+        m.name.toLowerCase().includes(query) ||
+        m.contact?.toLowerCase().includes(query)
+      );
+    }
+
+    // Section filter
+    if (filterSection !== 'all') {
+      result = result.filter((m) => m.section === filterSection);
+    }
+
+    // Package filter
+    if (filterPackage !== 'all') {
+      result = result.filter((m) => m.package === filterPackage);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'name') {
+        comparison = a.name.localeCompare(b.name, 'ar');
+      } else if (sortBy === 'package') {
+        comparison = a.package - b.package;
+      } else {
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    return result;
+  }, [members, searchQuery, filterSection, filterPackage, sortBy, sortOrder]);
+
+  // Stats
+  const stats = useMemo(() => ({
+    كبار: members.filter((m) => m.section === 'كبار مجال الشير').length,
+    نجوم: members.filter((m) => m.section === 'نجوم الشير').length,
+    بتوع: members.filter((m) => m.section === 'بتوع الشير').length,
+  }), [members]);
 
   const getPackageIcon = (pkg: Package) => {
     if (pkg === 50) return <Crown className="w-4 h-4 text-gold" />;
     if (pkg === 20) return <Star className="w-4 h-4 text-silver" />;
     return <Users className="w-4 h-4 text-bronze" />;
   };
+
+  if (authLoading || membersLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -224,27 +273,85 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Search & Filters */}
+        <div className="bg-card rounded-xl border border-border p-4 mb-6">
+          <div className="flex flex-col gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="بحث بالاسم أو رقم التواصل..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10"
+              />
+            </div>
+
+            {/* Filters Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Select
+                value={filterSection}
+                onValueChange={(v) => setFilterSection(v as Section | 'all')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="القسم" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الأقسام</SelectItem>
+                  <SelectItem value="كبار مجال الشير">كبار مجال الشير</SelectItem>
+                  <SelectItem value="نجوم الشير">نجوم الشير</SelectItem>
+                  <SelectItem value="بتوع الشير">بتوع الشير</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filterPackage === 'all' ? 'all' : filterPackage.toString()}
+                onValueChange={(v) => setFilterPackage(v === 'all' ? 'all' : (Number(v) as Package))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="الباقة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الباقات</SelectItem>
+                  <SelectItem value="50">50 جنيه</SelectItem>
+                  <SelectItem value="20">20 جنيه</SelectItem>
+                  <SelectItem value="10">10 جنيه</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="ترتيب حسب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">تاريخ الإضافة</SelectItem>
+                  <SelectItem value="name">الاسم</SelectItem>
+                  <SelectItem value="package">الباقة</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as typeof sortOrder)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="الترتيب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">تنازلي</SelectItem>
+                  <SelectItem value="asc">تصاعدي</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
         {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
           <Button onClick={openAddModal} className="gap-2">
             <Plus className="w-4 h-4" />
             إضافة عضو
           </Button>
-
-          <Select
-            value={filterSection}
-            onValueChange={(v) => setFilterSection(v as Section | 'all')}
-          >
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="تصفية حسب القسم" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الأقسام</SelectItem>
-              <SelectItem value="كبار مجال الشير">كبار مجال الشير</SelectItem>
-              <SelectItem value="نجوم الشير">نجوم الشير</SelectItem>
-              <SelectItem value="بتوع الشير">بتوع الشير</SelectItem>
-            </SelectContent>
-          </Select>
+          <span className="text-sm text-muted-foreground">
+            {filteredMembers.length} عضو
+          </span>
         </div>
 
         {/* Members Table */}
@@ -290,13 +397,13 @@ const AdminDashboard = () => {
                     <td className="p-4">
                       <span
                         className={cn(
-                          "px-2 py-1 rounded-full text-xs font-medium",
-                          member.isVisible
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-destructive/20 text-destructive"
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          member.is_visible
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-destructive/20 text-destructive'
                         )}
                       >
-                        {member.isVisible ? 'ظاهر' : 'مخفي'}
+                        {member.is_visible ? 'ظاهر' : 'مخفي'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -313,7 +420,7 @@ const AdminDashboard = () => {
                           size="icon"
                           onClick={() => toggleVisibility(member)}
                         >
-                          {member.isVisible ? (
+                          {member.is_visible ? (
                             <EyeOff className="w-4 h-4" />
                           ) : (
                             <Eye className="w-4 h-4" />
@@ -331,6 +438,13 @@ const AdminDashboard = () => {
                     </td>
                   </tr>
                 ))}
+                {filteredMembers.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                      لا يوجد أعضاء مطابقين للبحث
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -445,8 +559,13 @@ const AdminDashboard = () => {
               <Button
                 className="flex-1 gap-2"
                 onClick={handleSave}
+                disabled={addMemberMutation.isPending || updateMemberMutation.isPending}
               >
-                <Save className="w-4 h-4" />
+                {(addMemberMutation.isPending || updateMemberMutation.isPending) ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 حفظ
               </Button>
             </div>
@@ -458,4 +577,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      members: {
+        Row: {
+          contact: string | null
+          created_at: string
+          id: string
+          image: string | null
+          is_visible: boolean
+          name: string
+          package: number
+          section: string
+          updated_at: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_visible?: boolean
+          name: string
+          package: number
+          section: string
+          updated_at?: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_visible?: boolean
+          name?: string
+          package?: number
+          section?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           id: string

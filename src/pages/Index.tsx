@@ -4,11 +4,12 @@ import Navbar from '@/components/Navbar';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import MembersGrid from '@/components/MembersGrid';
 import Footer from '@/components/Footer';
-import { useMembersStore } from '@/hooks/useMembersStore';
+import { useMembersPublic } from '@/hooks/useMembers';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState<Section>('كبار مجال الشير');
-  const { members } = useMembersStore();
+  const { data: members = [], isLoading } = useMembersPublic();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -22,10 +23,16 @@ const Index = () => {
         <SubscriptionBanner />
 
         {/* Members Display */}
-        <MembersGrid
-          members={members}
-          section={activeSection}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <MembersGrid
+            members={members}
+            section={activeSection}
+          />
+        )}
       </main>
 
       <Footer />
@@ -34,4 +41,3 @@ const Index = () => {
 };
 
 export default Index;
-
