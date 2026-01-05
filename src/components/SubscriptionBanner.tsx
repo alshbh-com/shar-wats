@@ -1,8 +1,29 @@
 import { Crown, Star, Users, MessageCircle, Image, Phone, User } from 'lucide-react';
 import { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const SubscriptionBanner = () => {
-  const [hoveredPackage, setHoveredPackage] = useState<number | null>(null);
+  const [activePackage, setActivePackage] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+
+  const handlePackageInteraction = (packageId: number) => {
+    if (isMobile) {
+      // Toggle on tap for mobile
+      setActivePackage(activePackage === packageId ? null : packageId);
+    }
+  };
+
+  const handleMouseEnter = (packageId: number) => {
+    if (!isMobile) {
+      setActivePackage(packageId);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setActivePackage(null);
+    }
+  };
 
   return (
     <section className="relative py-6 overflow-hidden border-b border-border/30">
@@ -27,14 +48,15 @@ const SubscriptionBanner = () => {
             {/* 50 */}
             <div 
               className="group relative flex items-center gap-2 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/30 rounded-full px-3 py-2 hover:border-gold/60 transition-all cursor-pointer"
-              onMouseEnter={() => setHoveredPackage(50)}
-              onMouseLeave={() => setHoveredPackage(null)}
+              onClick={() => handlePackageInteraction(50)}
+              onMouseEnter={() => handleMouseEnter(50)}
+              onMouseLeave={handleMouseLeave}
             >
               <Crown className="w-4 h-4 text-gold" />
               <span className="text-sm font-bold text-gold">50ج</span>
               
               {/* Tooltip */}
-              {hoveredPackage === 50 && (
+              {activePackage === 50 && (
                 <div className="absolute top-full mt-2 right-0 md:right-auto md:left-1/2 md:-translate-x-1/2 z-50 w-48 bg-card border border-gold/30 rounded-xl p-3 shadow-xl animate-fade-in">
                   <div className="absolute -top-2 right-4 md:right-auto md:left-1/2 md:-translate-x-1/2 w-3 h-3 bg-card border-t border-r border-gold/30 rotate-[-45deg]" />
                   <p className="font-bold text-gold text-sm mb-2">كبار مجال الشير</p>
@@ -59,14 +81,15 @@ const SubscriptionBanner = () => {
             {/* 20 */}
             <div 
               className="group relative flex items-center gap-2 bg-silver/10 border border-silver/30 rounded-full px-3 py-2 hover:border-silver/60 transition-all cursor-pointer"
-              onMouseEnter={() => setHoveredPackage(20)}
-              onMouseLeave={() => setHoveredPackage(null)}
+              onClick={() => handlePackageInteraction(20)}
+              onMouseEnter={() => handleMouseEnter(20)}
+              onMouseLeave={handleMouseLeave}
             >
               <Star className="w-4 h-4 text-silver" />
               <span className="text-sm font-bold text-silver">20ج</span>
               
               {/* Tooltip */}
-              {hoveredPackage === 20 && (
+              {activePackage === 20 && (
                 <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 w-44 bg-card border border-silver/30 rounded-xl p-3 shadow-xl animate-fade-in">
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-card border-t border-r border-silver/30 rotate-[-45deg]" />
                   <p className="font-bold text-silver text-sm mb-2">نجوم الشير</p>
@@ -91,14 +114,15 @@ const SubscriptionBanner = () => {
             {/* 10 */}
             <div 
               className="group relative flex items-center gap-2 bg-muted/50 border border-border rounded-full px-3 py-2 hover:border-border/80 transition-all cursor-pointer"
-              onMouseEnter={() => setHoveredPackage(10)}
-              onMouseLeave={() => setHoveredPackage(null)}
+              onClick={() => handlePackageInteraction(10)}
+              onMouseEnter={() => handleMouseEnter(10)}
+              onMouseLeave={handleMouseLeave}
             >
               <Users className="w-4 h-4 text-bronze" />
               <span className="text-sm font-bold text-bronze">10ج</span>
               
               {/* Tooltip */}
-              {hoveredPackage === 10 && (
+              {activePackage === 10 && (
                 <div className="absolute top-full mt-2 left-0 md:left-1/2 md:-translate-x-1/2 z-50 w-40 bg-card border border-border rounded-xl p-3 shadow-xl animate-fade-in">
                   <div className="absolute -top-2 left-4 md:left-1/2 md:-translate-x-1/2 w-3 h-3 bg-card border-t border-r border-border rotate-[-45deg]" />
                   <p className="font-bold text-bronze text-sm mb-2">بتوع الشير</p>
