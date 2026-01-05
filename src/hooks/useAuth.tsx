@@ -23,9 +23,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAdminStatus = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_roles')
         .select('role')
-        .eq('id', userId)
+        .eq('user_id', userId)
+        .eq('role', 'admin')
         .maybeSingle();
 
       if (error) {
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setIsAdmin(data?.role === 'admin');
+      setIsAdmin(!!data);
     } catch {
       setIsAdmin(false);
     }
