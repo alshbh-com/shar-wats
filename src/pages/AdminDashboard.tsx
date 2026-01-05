@@ -16,6 +16,7 @@ import {
   Search,
   Loader2,
 } from 'lucide-react';
+import { ImageUploader } from '@/components/ImageUploader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -517,17 +518,10 @@ const AdminDashboard = () => {
 
               {/* Show image field for 50 and 20 packages */}
               {(formData.section === 'كبار مجال الشير' || formData.section === 'نجوم الشير') && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                    رابط الصورة
-                  </label>
-                  <Input
-                    placeholder="https://..."
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                    dir="ltr"
-                  />
-                </div>
+                <ImageUploader
+                  currentImage={formData.image}
+                  onImageChange={(url) => setFormData({ ...formData, image: url })}
+                />
               )}
 
               {/* Show contact field only for 50 package */}
