@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/select';
 import { Member, Section, Package } from '@/types/member';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
 import {
   useMembersAdmin,
   useAddMember,
@@ -37,7 +36,6 @@ import {
 } from '@/hooks/useMembers';
 
 const AdminDashboard = () => {
-  const { user, isAdmin, isLoading: authLoading, signOut } = useAuth();
   const { data: members = [], isLoading: membersLoading } = useMembersAdmin();
   const addMemberMutation = useAddMember();
   const updateMemberMutation = useUpdateMember();
@@ -65,15 +63,16 @@ const AdminDashboard = () => {
     package: 50 as Package,
   });
 
-  // Check auth
+  // Check if logged in via localStorage
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
+    const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+    if (!isLoggedIn) {
       navigate('/admin');
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [navigate]);
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    localStorage.removeItem('isAdminLoggedIn');
     navigate('/admin');
   };
 
@@ -199,7 +198,7 @@ const AdminDashboard = () => {
     return <Users className="w-4 h-4 text-bronze" />;
   };
 
-  if (authLoading || membersLoading) {
+  if (membersLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
