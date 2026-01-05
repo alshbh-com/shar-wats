@@ -10,8 +10,7 @@ import {
   LogOut,
   Users,
   Crown,
-  Award,
-  Medal,
+  Star,
   X,
   Save
 } from 'lucide-react';
@@ -42,7 +41,7 @@ const AdminDashboard = () => {
     name: '',
     image: '',
     contact: '',
-    section: 'الكبار' as Section,
+    section: 'كبار مجال الشير' as Section,
     package: 50 as Package,
   });
 
@@ -65,7 +64,7 @@ const AdminDashboard = () => {
       name: '',
       image: '',
       contact: '',
-      section: 'الكبار',
+      section: 'كبار مجال الشير',
       package: 50,
     });
     setIsModalOpen(true);
@@ -81,6 +80,14 @@ const AdminDashboard = () => {
       package: member.package,
     });
     setIsModalOpen(true);
+  };
+
+  // Auto-set package based on section
+  const handleSectionChange = (section: Section) => {
+    let pkg: Package = 50;
+    if (section === 'نجوم الشير') pkg = 20;
+    if (section === 'بتوع الشير') pkg = 10;
+    setFormData({ ...formData, section, package: pkg });
   };
 
   const handleSave = () => {
@@ -163,8 +170,8 @@ const AdminDashboard = () => {
 
   const getPackageIcon = (pkg: Package) => {
     if (pkg === 50) return <Crown className="w-4 h-4 text-gold" />;
-    if (pkg === 20) return <Award className="w-4 h-4 text-silver" />;
-    return <Medal className="w-4 h-4 text-bronze" />;
+    if (pkg === 20) return <Star className="w-4 h-4 text-silver" />;
+    return <Users className="w-4 h-4 text-bronze" />;
   };
 
   return (
@@ -204,19 +211,19 @@ const AdminDashboard = () => {
                 <Crown className="w-5 h-5 text-gold" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'الكبار').length}</p>
-                <p className="text-xs text-muted-foreground">الكبار</p>
+                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'كبار مجال الشير').length}</p>
+                <p className="text-xs text-muted-foreground">كبار الشير</p>
               </div>
             </div>
           </div>
           <div className="bg-card rounded-xl p-4 border border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Award className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-silver/20 flex items-center justify-center">
+                <Star className="w-5 h-5 text-silver" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'كبار مجال الشير').length}</p>
-                <p className="text-xs text-muted-foreground">كبار الشير</p>
+                <p className="text-2xl font-bold">{members.filter((m) => m.section === 'نجوم الشير').length}</p>
+                <p className="text-xs text-muted-foreground">نجوم الشير</p>
               </div>
             </div>
           </div>
@@ -249,8 +256,8 @@ const AdminDashboard = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">جميع الأقسام</SelectItem>
-              <SelectItem value="الكبار">الكبار</SelectItem>
               <SelectItem value="كبار مجال الشير">كبار مجال الشير</SelectItem>
+              <SelectItem value="نجوم الشير">نجوم الشير</SelectItem>
               <SelectItem value="بتوع الشير">بتوع الشير</SelectItem>
             </SelectContent>
           </Select>
@@ -376,80 +383,67 @@ const AdminDashboard = () => {
 
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                  رابط الصورة
-                </label>
-                <Input
-                  placeholder="https://..."
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  dir="ltr"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                  رقم التواصل
-                </label>
-                <Input
-                  placeholder="01xxxxxxxxx"
-                  value={formData.contact}
-                  onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                  dir="ltr"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   القسم
                 </label>
                 <Select 
                   value={formData.section} 
-                  onValueChange={(v) => setFormData({ ...formData, section: v as Section })}
+                  onValueChange={(v) => handleSectionChange(v as Section)}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="الكبار">الكبار</SelectItem>
-                    <SelectItem value="كبار مجال الشير">كبار مجال الشير</SelectItem>
-                    <SelectItem value="بتوع الشير">بتوع الشير</SelectItem>
+                    <SelectItem value="كبار مجال الشير">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-gold" />
+                        كبار مجال الشير (50 جنيه)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="نجوم الشير">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-silver" />
+                        نجوم الشير (20 جنيه)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="بتوع الشير">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-bronze" />
+                        بتوع الشير (10 جنيه)
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                  الباقة
-                </label>
-                <Select 
-                  value={formData.package.toString()} 
-                  onValueChange={(v) => setFormData({ ...formData, package: parseInt(v) as Package })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="50">
-                      <div className="flex items-center gap-2">
-                        <Crown className="w-4 h-4 text-gold" />
-                        50 جنيه (Premium)
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="20">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4 text-silver" />
-                        20 جنيه (مميز)
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="10">
-                      <div className="flex items-center gap-2">
-                        <Medal className="w-4 h-4 text-bronze" />
-                        10 جنيه (عادي)
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Show image field for 50 and 20 packages */}
+              {(formData.section === 'كبار مجال الشير' || formData.section === 'نجوم الشير') && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                    رابط الصورة
+                  </label>
+                  <Input
+                    placeholder="https://..."
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    dir="ltr"
+                  />
+                </div>
+              )}
+
+              {/* Show contact field only for 50 package */}
+              {formData.section === 'كبار مجال الشير' && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                    رقم التواصل
+                  </label>
+                  <Input
+                    placeholder="01xxxxxxxxx"
+                    value={formData.contact}
+                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                    dir="ltr"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Actions */}
