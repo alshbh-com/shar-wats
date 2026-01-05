@@ -1,4 +1,4 @@
-export type Section = 'الكبار' | 'كبار مجال الشير' | 'بتوع الشير';
+export type Section = 'كبار مجال الشير' | 'نجوم الشير' | 'بتوع الشير';
 export type Package = 50 | 20 | 10;
 
 export interface Member {
