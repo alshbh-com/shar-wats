@@ -26,7 +26,7 @@ const SubscriptionBanner = () => {
   };
 
   return (
-    <section className="relative py-6 overflow-hidden border-b border-border/30">
+    <section className="relative py-6 overflow-visible border-b border-border/30" style={{ zIndex: 100 }}>
       {/* Background Glow */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[150px] bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
@@ -44,7 +44,7 @@ const SubscriptionBanner = () => {
           </div>
 
           {/* Mini Packages with Tooltips */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 md:gap-3 overflow-visible" style={{ zIndex: 101 }}>
             {/* 50 */}
             <div 
               className="group relative flex items-center gap-2 bg-gradient-to-r from-gold/20 to-gold/10 border border-gold/30 rounded-full px-3 py-2 hover:border-gold/60 transition-all cursor-pointer"
